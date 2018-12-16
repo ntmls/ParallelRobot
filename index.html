@@ -1,4 +1,7 @@
 <html>
+    <head>
+        <script src = "./V2.js"></script>
+    </head>
 <body onload="init()">
     <svg id="display" height="720" width="1000">
         <circle id="cursor" cx="50" cy="50" r="10" stroke="black"stroke-width="3" fill="red" />
@@ -7,15 +10,15 @@
     </svg>
     <script>
         var display, cursorX=0, cursorY=0;
-
+        
         var displayParams = {
             scale: 20, 
-            offset: { x: 0, y: 0 }
+            offset: new V2()
         }
         
         var modelParams = {
-            origin: { x: 0, y: 0 }, 
-            target: { x: 0, y: 3 },
+            origin: new V2(), 
+            target: new V2(),
             servoOffset: 2,
             servoRange: 120,
             servoAngleOffset: 0,
@@ -26,15 +29,11 @@
         };
 
         function calculateModel(params) {
+            var rightOffset = new V2(params.servoOffset, 0);
+            var leftOffset = VFLIP(rightOffset);;
             return {
-                leftServoPosition: { 
-                    x: params.origin.x - params.servoOffset, 
-                    y: params.origin.y  
-                }, 
-                rightServoPosition: { 
-                    x: params.origin.x + params.servoOffset, 
-                    y: params.origin.y  
-                }
+                leftServoPosition: VADD(params.origin, leftOffset), 
+                rightServoPosition: VADD(params.origin, rightOffset)
             }
         }
 
