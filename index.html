@@ -1,0 +1,88 @@
+<html>
+<body onload="init()">
+    <svg id="display" height="720" width="1000">
+        <circle id="cursor" cx="50" cy="50" r="10" stroke="black"stroke-width="3" fill="red" />
+        <circle id="leftServo" cx="0" cy="0" r="10" fill="black" />
+        <circle id="rightServo" cx="0" cy="0" r="10" fill="black" />
+    </svg>
+    <script>
+        var display, cursorX=0, cursorY=0;
+
+        var displayParams = {
+            scale: 20, 
+            offset: { x: 0, y: 0 }
+        }
+        
+        var modelParams = {
+            origin: { x: 0, y: 0 }, 
+            target: { x: 0, y: 3 },
+            servoOffset: 2,
+            servoRange: 120,
+            servoAngleOffset: 0,
+            leftServoAngle: 60, 
+            rightServoAngle: 60,
+            armLength1: 5, 
+            armLength2: 7111
+        };
+
+        function calculateModel(params) {
+            return {
+                leftServoPosition: { 
+                    x: params.origin.x - params.servoOffset, 
+                    y: params.origin.y  
+                }, 
+                rightServoPosition: { 
+                    x: params.origin.x + params.servoOffset, 
+                    y: params.origin.y  
+                }
+            }
+        }
+
+        function physicalToScreen(point, displayParams) {
+            return { 
+                x: point.x * displayParams.scale + displayParams.offset.x,
+                y: point.y * displayParams.scale + displayParams.offset.y
+            };
+        }
+
+        function screenToPhysical(point, displayParams) {
+            
+        }
+
+        function init() {
+            display = document.getElementById("display");
+            display.addEventListener("mousemove", onMouse)
+            displayParams.offset.x = display.clientWidth / 2;
+            displayParams.offset.y = display.clientHeight / 2;
+            setInterval(draw, 100);
+        }
+
+        function onMouse(evt) {
+            cursorX = evt.clientX;
+            cursorY = evt.clientY;
+        }
+
+        function draw() {
+            pt = display.createSVGPoint();
+            pt.x = cursorX;
+            pt.y = cursorY;
+            var cursorpt =  pt.matrixTransform(display.getScreenCTM().inverse());
+            var cursor = document.getElementById("cursor");
+            cursor.setAttribute("cx", cursorpt.x);
+            cursor.setAttribute("cy", cursorpt.y);  
+
+            var model = calculateModel(modelParams, displayParams);
+
+            var leftServo = document.getElementById("leftServo");
+            var temp = physicalToScreen(model.leftServoPosition, displayParams);
+            leftServo.setAttribute("cx", temp.x);
+            leftServo.setAttribute("cy", temp.y);
+
+            var rightServo = document.getElementById("rightServo");
+            var temp = physicalToScreen(model.rightServoPosition, displayParams);
+            rightServo.setAttribute("cx", temp.x);
+            rightServo.setAttribute("cy", temp.y);
+        }
+    </script>
+</body>
+</html>
