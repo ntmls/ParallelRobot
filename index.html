@@ -1,13 +1,30 @@
+<!DOCTYPE html>
 <html>
     <head>
         <script src = "./V2.js"></script>
     </head>
 <body onload="init()">
-    <svg id="display" height="720" width="1000">
-        <circle id="cursor" cx="50" cy="50" r="10" stroke="black"stroke-width="3" fill="red" />
-        <circle id="leftServo" cx="0" cy="0" r="10" fill="black" />
-        <circle id="rightServo" cx="0" cy="0" r="10" fill="black" />
+    <svg id="display" height="500" width="500">
+        <circle id="cursor" cx="50" cy="50" r="10" stroke="black" stroke-width="3" fill="red" ></circle>
+        <circle id="cursor-circle" cx="50" cy="50" r="30" stroke="red" stroke-width="3" fill="none"></circle>
+        <circle id="left-servo" cx="0" cy="0" r="10" fill="black" ></circle>
+        <circle id="left-servo-circle" cx="50" cy="50" r="30" stroke="red" stroke-width="3" fill="none"></circle>
+        <circle id="right-servo" cx="0" cy="0" r="10" fill="black" ></circle>
+        <circle id="right-servo-circle" cx="50" cy="50" r="30" stroke="red" stroke-width="3" fill="none"></circle>
+
+        <line id="left-servo-arm-one" x1="0" y1="0" x2="100" y2="100" stroke="black" stroke-width="3"></line>
+        <line id="right-servo-arm-one" x1="0" y1="0" x2="100" y2="100" stroke="black" stroke-width="3"></line>
     </svg>
+    <div>
+        <form>
+            <label>Distance Between Servos</label>
+            <input id="distance-between-servos" type="text" value="" />
+            <label>Target X</label>
+            <input id="target-x" type="text" value="" />
+            <label>Target Y</label>
+            <input id="target-y" type="text" value="" />
+        </form>
+    </div>
     <script>
         var display, cursorX=0, cursorY=0;
         
@@ -19,33 +36,55 @@
         var modelParams = {
             origin: new V2(), 
             target: new V2(),
-            servoOffset: 2,
+            distanceBetweenServos: 3,
             servoRange: 120,
             servoAngleOffset: 0,
-            leftServoAngle: 60, 
-            rightServoAngle: 60,
             armLength1: 5, 
-            armLength2: 7111
+            armLength2: 7
         };
 
         function calculateModel(params) {
-            var rightOffset = new V2(params.servoOffset, 0);
-            var leftOffset = VFLIP(rightOffset);;
+            var rightOffset = new V2(params.distanceBetweenServos / 2, 0);
+            var leftOffset = VFLIP(rightOffset);
             return {
                 leftServoPosition: VADD(params.origin, leftOffset), 
-                rightServoPosition: VADD(params.origin, rightOffset)
+                rightServoPosition: VADD(params.origin, rightOffset),
+                leftServoAngle: calculateArmAngle(params.target, leftOffset, params.armLength1, params.armLength2, false), 
+                rightServoAngle: calculateArmAngle(params.target, rightOffset, params.armLength1, params.armLength2, true)
             }
         }
 
+        function calculateArmAngle(target, servoOffset, armLength1, armLength2, flip) {
+            var negate = 1;
+            if (flip) { 
+                negate = -1;
+            }
+            var deltaVect = VADD(target, VFLIP(servoOffset));
+            var deltaLen = VLEN(deltaVect)
+            var deltavectNorm = VNORM(deltaVect);
+            var radians = negate * calcAngleFromThreeSides(deltaLen, armLength1, armLength2);
+            var armPosition = VROT(deltavectNorm, radians);
+            armPosition = new V2(negate * armPosition.x, armPosition.y)
+            var armAngle = -Math.atan2(armPosition.x, armPosition.y);
+            var degrees = R2D(armAngle);
+            return degrees;
+        }
+
+        // calculate the angle opposite of side c
+        function calcAngleFromThreeSides(a, b, c) {
+            var num = a * a + b * b - c * c;
+            var denom = 2 * a * b;
+            return Math.acos(num / denom);
+        }
+
         function physicalToScreen(point, displayParams) {
-            return { 
-                x: point.x * displayParams.scale + displayParams.offset.x,
-                y: point.y * displayParams.scale + displayParams.offset.y
-            };
+            var scaled = VMULT(point, displayParams.scale);
+            return VADD(scaled, displayParams.offset);
         }
 
         function screenToPhysical(point, displayParams) {
-            
+            var offset = VADD(point, VFLIP(displayParams.offset));
+            return VMULT(offset, 1 / displayParams.scale);
         }
 
         function init() {
@@ -53,7 +92,7 @@
             display.addEventListener("mousemove", onMouse)
             displayParams.offset.x = display.clientWidth / 2;
             displayParams.offset.y = display.clientHeight / 2;
-            setInterval(draw, 100);
+            requestAnimationFrame(draw);
         }
 
         function onMouse(evt) {
@@ -61,26 +100,90 @@
             cursorY = evt.clientY;
         }
 
-        function draw() {
+        function draw(now) {
+
+            var temp;
+
+            // figure out where the mouse is at
             pt = display.createSVGPoint();
             pt.x = cursorX;
             pt.y = cursorY;
+
+            // draw the cursor
             var cursorpt =  pt.matrixTransform(display.getScreenCTM().inverse());
             var cursor = document.getElementById("cursor");
             cursor.setAttribute("cx", cursorpt.x);
             cursor.setAttribute("cy", cursorpt.y);  
+            var cursorCircle = document.getElementById("cursor-circle");
+            cursorCircle.setAttribute("cx", cursorpt.x); 
+            cursorCircle.setAttribute("cy", cursorpt.y);
+            cursorCircle.setAttribute("r", modelParams.armLength2 * displayParams.scale);
 
+            // update the target on the model parameters
+            var target = screenToPhysical(cursorpt, displayParams);
+            modelParams.target.x = roundToThou(target.x);
+            modelParams.target.y = roundToThou(target.y);
+
+            // calculate the model from the parameters
             var model = calculateModel(modelParams, displayParams);
+            
+            // draw the left servo
+            var leftServo = document.getElementById("left-servo");
+            var leftServoScreenPosition = physicalToScreen(model.leftServoPosition, displayParams);
+            leftServo.setAttribute("cx", leftServoScreenPosition.x);
+            leftServo.setAttribute("cy", leftServoScreenPosition.y);
+            var leftServoCircle = document.getElementById("left-servo-circle");
+            leftServoCircle.setAttribute("cx", leftServoScreenPosition.x);
+            leftServoCircle.setAttribute("cy", leftServoScreenPosition.y);
+            leftServoCircle.setAttribute("r", modelParams.armLength1 * displayParams.scale);
 
-            var leftServo = document.getElementById("leftServo");
-            var temp = physicalToScreen(model.leftServoPosition, displayParams);
-            leftServo.setAttribute("cx", temp.x);
-            leftServo.setAttribute("cy", temp.y);
+            // draw the right servo
+            var rightServo = document.getElementById("right-servo");
+            var rightServoScreenPosition = physicalToScreen(model.rightServoPosition, displayParams);
+            rightServo.setAttribute("cx", rightServoScreenPosition.x);
+            rightServo.setAttribute("cy", rightServoScreenPosition.y);
+            var rightServoCircle = document.getElementById("right-servo-circle");
+            rightServoCircle.setAttribute("cx", rightServoScreenPosition.x);
+            rightServoCircle.setAttribute("cy", rightServoScreenPosition.y);
+            rightServoCircle.setAttribute("r", modelParams.armLength1 * displayParams.scale);
+            
+            // draw the right first arm
+            var line1 = document.getElementById("left-servo-arm-one");
+            line1.setAttribute("x1", leftServoScreenPosition.x);
+            line1.setAttribute("y1", leftServoScreenPosition.y);
+            var radians = D2R(model.leftServoAngle);
+            var v1 = VROT(new V2(0, modelParams.armLength1 * displayParams.scale),radians);
+            v1 = VADD(leftServoScreenPosition, v1);
+            line1.setAttribute("x2", v1.x);
+            line1.setAttribute("y2", v1.y);
 
-            var rightServo = document.getElementById("rightServo");
-            var temp = physicalToScreen(model.rightServoPosition, displayParams);
-            rightServo.setAttribute("cx", temp.x);
-            rightServo.setAttribute("cy", temp.y);
+            // draw the right first arm
+            var line2 = document.getElementById("right-servo-arm-one");
+            line2.setAttribute("x1", rightServoScreenPosition.x);
+            line2.setAttribute("y1", rightServoScreenPosition.y);
+            var radians = -D2R(model.rightServoAngle);
+            var v1 = VROT(new V2(0, modelParams.armLength1 * displayParams.scale),radians);
+            v1 = VADD(rightServoScreenPosition, v1);
+            line2.setAttribute("x2", v1.x);
+            line2.setAttribute("y2", v1.y);
+
+            // update the parameter display
+            updateParamDisplay();
+
+            requestAnimationFrame(draw);
+        }
+
+        function updateParamDisplay() {
+            var distanceBetweenServos = document.getElementById("distance-between-servos");
+            distanceBetweenServos.value = modelParams.distanceBetweenServos;
+            var targetx = document.getElementById("target-x");
+            targetx.value = modelParams.target.x;
+            var targety = document.getElementById("target-y");
+            targety.value = modelParams.target.y;
+        }; 
+
+        function roundToThou(value) {
+            return Math.round(value * 1000) / 1000;
         }
     </script>
 </body>
