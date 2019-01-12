@@ -11,9 +11,10 @@
         <circle id="left-servo-circle" cx="50" cy="50" r="30" stroke="red" stroke-width="3" fill="none"></circle>
         <circle id="right-servo" cx="0" cy="0" r="10" fill="black" ></circle>
         <circle id="right-servo-circle" cx="50" cy="50" r="30" stroke="red" stroke-width="3" fill="none"></circle>
-
         <line id="left-servo-arm-one" x1="0" y1="0" x2="100" y2="100" stroke="black" stroke-width="3"></line>
         <line id="right-servo-arm-one" x1="0" y1="0" x2="100" y2="100" stroke="black" stroke-width="3"></line>
+        <line id="left-servo-arm-two" x1="0" y1="0" x2="100" y2="100" stroke="black" stroke-width="3"></line>
+        <line id="right-servo-arm-two" x1="0" y1="0" x2="100" y2="100" stroke="black" stroke-width="3"></line>
     </svg>
     <div>
         <form>
@@ -36,11 +37,11 @@
         var modelParams = {
             origin: new V2(), 
             target: new V2(),
-            distanceBetweenServos: 3,
+            distanceBetweenServos: 2,
             servoRange: 120,
             servoAngleOffset: 0,
-            armLength1: 5, 
-            armLength2: 7
+            armLength1: 4, 
+            armLength2: 5
         };
 
         function calculateModel(params) {
@@ -147,25 +148,35 @@
             rightServoCircle.setAttribute("cy", rightServoScreenPosition.y);
             rightServoCircle.setAttribute("r", modelParams.armLength1 * displayParams.scale);
             
-            // draw the right first arm
-            var line1 = document.getElementById("left-servo-arm-one");
-            line1.setAttribute("x1", leftServoScreenPosition.x);
-            line1.setAttribute("y1", leftServoScreenPosition.y);
+            // draw the left arm
+            var line1a = document.getElementById("left-servo-arm-one");
+            var line1b = document.getElementById("left-servo-arm-two");
+            line1a.setAttribute("x1", leftServoScreenPosition.x);
+            line1a.setAttribute("y1", leftServoScreenPosition.y);
             var radians = D2R(model.leftServoAngle);
             var v1 = VROT(new V2(0, modelParams.armLength1 * displayParams.scale),radians);
             v1 = VADD(leftServoScreenPosition, v1);
-            line1.setAttribute("x2", v1.x);
-            line1.setAttribute("y2", v1.y);
+            line1a.setAttribute("x2", v1.x);
+            line1a.setAttribute("y2", v1.y);
+            line1b.setAttribute("x1", v1.x);
+            line1b.setAttribute("y1", v1.y);
+            line1b.setAttribute("x2", cursorpt.x);
+            line1b.setAttribute("y2", cursorpt.y);
 
-            // draw the right first arm
-            var line2 = document.getElementById("right-servo-arm-one");
-            line2.setAttribute("x1", rightServoScreenPosition.x);
-            line2.setAttribute("y1", rightServoScreenPosition.y);
+            // draw the right arm
+            var line2a = document.getElementById("right-servo-arm-one");
+            var line2b = document.getElementById("right-servo-arm-two");
+            line2a.setAttribute("x1", rightServoScreenPosition.x);
+            line2a.setAttribute("y1", rightServoScreenPosition.y);
             var radians = -D2R(model.rightServoAngle);
             var v1 = VROT(new V2(0, modelParams.armLength1 * displayParams.scale),radians);
             v1 = VADD(rightServoScreenPosition, v1);
-            line2.setAttribute("x2", v1.x);
-            line2.setAttribute("y2", v1.y);
+            line2a.setAttribute("x2", v1.x);
+            line2a.setAttribute("y2", v1.y);
+            line2b.setAttribute("x1", v1.x);
+            line2b.setAttribute("y1", v1.y);
+            line2b.setAttribute("x2", cursorpt.x);
+            line2b.setAttribute("y2", cursorpt.y);
 
             // update the parameter display
             updateParamDisplay();
