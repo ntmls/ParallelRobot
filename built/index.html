@@ -46,10 +46,10 @@
 
         function calculateModel(params) {
             var rightOffset = new V2(params.distanceBetweenServos / 2, 0);
-            var leftOffset = VFLIP(rightOffset);
+            var leftOffset = rightOffset.flip();
             return {
-                leftServoPosition: VADD(params.origin, leftOffset), 
-                rightServoPosition: VADD(params.origin, rightOffset),
+                leftServoPosition: params.origin.add(leftOffset), 
+                rightServoPosition: params.origin.add(rightOffset),
                 leftServoAngle: calculateArmAngle(params.target, leftOffset, params.armLength1, params.armLength2, false), 
                 rightServoAngle: calculateArmAngle(params.target, rightOffset, params.armLength1, params.armLength2, true)
             }
@@ -60,11 +60,10 @@
             if (flip) { 
                 negate = -1;
             }
-            var deltaVect = VADD(target, VFLIP(servoOffset));
-            var deltaLen = VLEN(deltaVect)
-            var deltavectNorm = VNORM(deltaVect);
+            var deltaVect = target.add(servoOffset.flip());
+            var deltaLen = deltaVect.magnitude();
             var radians = negate * calcAngleFromThreeSides(deltaLen, armLength1, armLength2);
-            var armPosition = VROT(deltavectNorm, radians);
+            var armPosition = deltaVect.normalize().rotate(radians);
             armPosition = new V2(negate * armPosition.x, armPosition.y)
             var armAngle = -Math.atan2(armPosition.x, armPosition.y);
             var degrees = R2D(armAngle);
@@ -79,13 +78,14 @@
         }
 
         function physicalToScreen(point, displayParams) {
-            var scaled = VMULT(point, displayParams.scale);
-            return VADD(scaled, displayParams.offset);
+            var scaled = point.scale(displayParams.scale);
+            return scaled.add(displayParams.offset);
         }
 
         function screenToPhysical(point, displayParams) {
-            var offset = VADD(point, VFLIP(displayParams.offset));
-            return VMULT(offset, 1 / displayParams.scale);
+            var vect = new V2(point.x, point.y);
+            var offset = vect.add(displayParams.offset.flip());
+            return offset.scale(1 / displayParams.scale);
         }
 
         function init() {
@@ -154,8 +154,8 @@
             line1a.setAttribute("x1", leftServoScreenPosition.x);
             line1a.setAttribute("y1", leftServoScreenPosition.y);
             var radians = D2R(model.leftServoAngle);
-            var v1 = VROT(new V2(0, modelParams.armLength1 * displayParams.scale),radians);
-            v1 = VADD(leftServoScreenPosition, v1);
+            var v1 = new V2(0, modelParams.armLength1 * displayParams.scale).rotate(radians);
+            v1 = leftServoScreenPosition.add(v1);
             line1a.setAttribute("x2", v1.x);
             line1a.setAttribute("y2", v1.y);
             line1b.setAttribute("x1", v1.x);
@@ -169,8 +169,8 @@
             line2a.setAttribute("x1", rightServoScreenPosition.x);
             line2a.setAttribute("y1", rightServoScreenPosition.y);
             var radians = -D2R(model.rightServoAngle);
-            var v1 = VROT(new V2(0, modelParams.armLength1 * displayParams.scale),radians);
-            v1 = VADD(rightServoScreenPosition, v1);
+            var v1 = new V2(0, modelParams.armLength1 * displayParams.scale).rotate(radians);
+            v1 = rightServoScreenPosition.add(v1);
             line2a.setAttribute("x2", v1.x);
             line2a.setAttribute("y2", v1.y);
             line2b.setAttribute("x1", v1.x);
