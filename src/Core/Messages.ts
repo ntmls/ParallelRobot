@@ -1,7 +1,7 @@
-export interface ICommand<TRequest> {
-    execute(request: TRequest): void;
+export interface ICommandHandler<TCommand> {
+    execute(command: TCommand): void;
 }
 
-export interface IPresenter<TResult> {
-    present(result: TResult): void;
+export interface IPresenter<TOutput> {
+    present(output: TOutput): void;
 }
