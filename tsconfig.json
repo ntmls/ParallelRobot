@@ -1,11 +1,10 @@
 {
     "compilerOptions": {
-        "outDir": "./built",
+        "outDir": "./built/scripts",
         "allowJs": true,
         "target": "es5", 
         "noEmitOnError": true,
-        "noImplicitAny": true,
-        "noImplicitReturns": true
+        "module": "amd"
     },
     "include": [
         "./src/**/*"

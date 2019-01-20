@@ -1,0 +1,1 @@
+requirejs(["UI/main", "Core/Vector2"]);
