@@ -1,4 +1,4 @@
-define(["require", "exports", "../Core/Vector2"], function (require, exports, Vector2_1) {
+define(["require", "exports", "../Core/Vector2", "./ParallelRobot"], function (require, exports, Vector2_1, ParallelRobot_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var CalculateArmPositionsCommand = /** @class */ (function () {
@@ -27,37 +27,25 @@ define(["require", "exports", "../Core/Vector2"], function (require, exports, Ve
         CalculateArmPositionsCommandHandler.prototype.execute = function (command) {
             var rightOffset = new Vector2_1.Vector2(command.distanceBetweenServos / 2, 0);
             var leftOffset = rightOffset.flip();
+            var robot = new ParallelRobot_1.ParallelRobot();
+            robot.armLength1 = command.armLength1;
+            robot.armLength2 = command.armLength2;
+            robot.leftServoPosition = command.origin.add(leftOffset);
+            robot.rightServoPosition = command.origin.add(rightOffset);
+            robot.servoAngleOffset = command.servoAngleOffset;
+            robot.servoRange = command.servoRange;
+            var angles = robot.calculateArmAngles(command.target);
             // calculate the output
             var output = new CalculateArmPositionsOutput();
-            output.leftServoPosition = command.origin.add(leftOffset);
-            output.rightServoPosition = command.origin.add(rightOffset);
-            output.leftServoAngle = this.calculateArmAngle(command.target, leftOffset, command.armLength1, command.armLength2, false);
-            output.rightServoAngle = this.calculateArmAngle(command.target, rightOffset, command.armLength1, command.armLength2, true);
-            output.armLength1 = command.armLength1;
-            output.armLength2 = command.armLength2;
+            output.leftServoPosition = robot.leftServoPosition;
+            output.rightServoPosition = robot.rightServoPosition;
+            output.leftServoAngle = angles[0];
+            output.rightServoAngle = angles[1];
+            output.armLength1 = robot.armLength1;
+            output.armLength2 = robot.armLength2;
             output.target = command.target;
-            // send the ouput
+            // send the output to be transformed by the display
             this.presener.present(output);
-        };
-        CalculateArmPositionsCommandHandler.prototype.calculateArmAngle = function (target, servoOffset, armLength1, armLength2, flip) {
-            var negate = 1;
-            if (flip) {
-                negate = -1;
-            }
-            var deltaVect = target.add(servoOffset.flip());
-            var deltaLen = deltaVect.magnitude();
-            var radians = negate * this.calcAngleFromThreeSides(deltaLen, armLength1, armLength2);
-            var armPosition = deltaVect.normalize().rotate(radians);
-            armPosition = new Vector2_1.Vector2(negate * armPosition.x, armPosition.y);
-            var armAngle = -Math.atan2(armPosition.x, armPosition.y);
-            var degrees = Vector2_1.Angles.R2D(armAngle);
-            return degrees;
-        };
-        // calculate the angle opposite of side c
-        CalculateArmPositionsCommandHandler.prototype.calcAngleFromThreeSides = function (a, b, c) {
-            var num = a * a + b * b - c * c;
-            var denom = 2 * a * b;
-            return Math.acos(num / denom);
         };
         return CalculateArmPositionsCommandHandler;
     }());
